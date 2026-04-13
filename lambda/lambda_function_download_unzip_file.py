@@ -4,7 +4,13 @@ from datetime import date
 import zipfile
 import io
 
+s3 = boto3.client("s3")
+
 def lambda_handler(event, context):
+    
+    BUCKET = "iata-data-lake-demo"
+    key = f"raw/source=iata/dt={date.today()}/sales.zip"
+    unzip_key = "staging/sales.csv"
 
     url = "https://eforexcel.com/wp/wp-content/uploads/2020/09/2m-Sales-Records.zip"
 
@@ -18,41 +24,35 @@ def lambda_handler(event, context):
 
     response = requests.get(url, headers=headers, stream=True)
 
-    print("STATUS:", response.status_code)
-
     if response.status_code != 200:
         return {
             "error": "Download failed",
             "status": response.status_code,
             "text": response.text[:200]
         }
+    else:
+        s3.upload_fileobj(response.raw, BUCKET, key)
 
-    s3 = boto3.client("s3")
+    #unzip#
+    unzip_raw_file(BUCKET, key, unzip_key)
 
-    key = f"raw/source=iata/dt={date.today()}/sales.zip"
+    return {
+        "status": response.status_code,
+        "s3_zip_file_path": key,
+        "s3_unzip_file_path": unzip_key
+    }
 
-    s3.upload_fileobj(response.raw, "iata-data-lake-demo", key)
-
-    #return {
-    #    "status": response.status_code,
-    #    "s3_path": key
-    #}
-
-##############################unzip###################
-    BUCKET = "iata-data-lake-demo"
+############################## unzip raw file ###################
+def unzip_raw_file(BUCKET, key, unzip_key):    
     obj = s3.get_object(Bucket=BUCKET, Key=key)
     buffer = io.BytesIO(obj["Body"].read())
 
     z = zipfile.ZipFile(buffer)
-
     filename = z.namelist()[0]
-
     csv_data = z.read(filename)
-
-    output_key = "staging/sales.csv"
 
     s3.put_object(
         Bucket=BUCKET,
-        Key=output_key,
+        Key=unzip_key,
         Body=csv_data
     )
