@@ -56,7 +56,6 @@ Resources:
         Variables:
           ENV: dev
           
-
 Outputs:
   LambdaName:
     Value: !Ref PythonLambda
