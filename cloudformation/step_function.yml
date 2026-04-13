@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Step Function to run two lambdas sequentially
+
+Parameters:
+  Lambda1Arn:
+    Type: String
+    Description: First Lambda ARN
+    Default: arn:aws:lambda:us-east-1:458186069252:function:download-file-1
+
+  Lambda2Arn:
+    Type: String
+    Description: Second Lambda ARN
+    Default: arn:aws:lambda:us-east-1:458186069252:function:parquet-partition-lambda-1
+
+Resources:
+
+  StepFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: step-function-lambda-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+
+      Policies:
+        - PolicyName: invoke-lambda
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Ref Lambda1Arn
+                  - !Ref Lambda2Arn
+
+  StepStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: lambda-sequential-run
+      RoleArn: !GetAtt StepFunctionRole.Arn
+      DefinitionString: !Sub |
+        {
+          "StartAt": "Lambda1",
+          "States": {
+            "Lambda1": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${Lambda1Arn}"
+              },
+              "Next": "Lambda2"
+            },
+            "Lambda2": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${Lambda2Arn}"
+              },
+              "End": true
+            }
+          }
+        }
+
+Outputs:
+  StepFunctionArn:
+    Value: !Ref StepStateMachine
