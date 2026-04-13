@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy Python Lambda from S3
+
+Parameters:
+  LambdaFunctionName:
+    Type: String
+    Default: parquet-partition-lambda-1
+
+  S3Bucket:
+    Type: String
+    Description: S3 bucket containing lambda zip
+    Default: iata-data-lake-demo
+
+  S3Key:
+    Type: String
+    Description: S3 key of lambda zip file
+    Default: lambda_zip_file/parquet-partition-lambda-1.zip
+
+  LambdaHandler:
+    Type: String
+    Default: lambda_function.lambda_handler
+
+  LambdaRuntime:
+    Type: String
+    Default: python3.12
+    
+  ExistingLambdaRoleArn:
+    Type: String
+    Description: Existing Lambda IAM Role ARN
+    Default: arn:aws:iam::458186069252:role/download-file-1-role
+    
+  ExistingLayerArn:
+    Type: String
+    Description: Existing Lambda Layer ARN
+    Default: arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python312:20
+
+Resources:
+
+  PythonLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref LambdaFunctionName
+      Runtime: !Ref LambdaRuntime
+      Handler: !Ref LambdaHandler
+      Role: !Ref ExistingLambdaRoleArn
+      Layers:
+        - !Ref ExistingLayerArn
+      Timeout: 300
+      MemorySize: 2048
+
+      Code:
+        S3Bucket: !Ref S3Bucket
+        S3Key: !Ref S3Key
+
+      Environment:
+        Variables:
+          ENV: dev
+          
+Outputs:
+  LambdaName:
+    Value: !Ref PythonLambda
+
+  LambdaArn:
+    Value: !GetAtt PythonLambda.Arn
