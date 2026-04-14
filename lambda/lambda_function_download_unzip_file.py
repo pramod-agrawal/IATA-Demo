@@ -49,10 +49,10 @@ def unzip_raw_file(BUCKET, key, unzip_key):
 
     z = zipfile.ZipFile(buffer)
     filename = z.namelist()[0]
-    csv_data = z.read(filename)
+    data = z.read(filename)
 
     s3.put_object(
         Bucket=BUCKET,
         Key=unzip_key,
-        Body=csv_data
+        Body=data
     )
