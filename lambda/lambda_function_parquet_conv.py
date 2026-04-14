@@ -8,7 +8,7 @@ BUCKET="iata-data-lake-demo"
 
 def lambda_handler(event, context):
 
-    input_key = "staging/sales.csv"
+    input_key = "staging/2m Sales Records.csv"
     
     obj = s3.get_object(Bucket=BUCKET, Key=input_key)
 
