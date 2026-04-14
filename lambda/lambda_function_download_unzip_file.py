@@ -36,23 +36,6 @@ def lambda_handler(event, context):
     #unzip#
     unzip_raw_file(BUCKET, key, unzip_key)
     
-    filename = key.split("/")[-1]
-    timestamp = datetime.now()
-    archive_key = f"archive/{timestamp}_{filename}"    
-    
-    try:
-        # archive original file
-        archived = archive_s3_object(BUCKET, key, archive_key)
-
-        if not archived:
-            raise Exception("Archive failed")
-            
-        # Delete original file
-        delete_s3_object(BUCKET, key)
-
-    except Exception as e:
-        print(f"Process failed: {str(e)}")
-
     return {
         "status": response.status_code,
         "s3_zip_file_path": key,
@@ -73,29 +56,3 @@ def unzip_raw_file(BUCKET, key, unzip_key):
         Key=unzip_key,
         Body=csv_data
     )
-    
-def archive_s3_object(BUCKET, key, archive_key):
-
-    try:
-        s3.copy_object(
-            Bucket=BUCKET,
-            CopySource={"Bucket": BUCKET, "Key": key},
-            Key=archive_key
-        )
-        print(f"Successfully archived: s3://{BUCKET}/{archive_key}")
-        return True
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return False
-    
-def delete_s3_object(bucket, key):
-
-    try:
-        s3.delete_object(
-            Bucket=bucket,
-            Key=key
-        )
-        print(f"Successfully deleted: s3://{bucket}/{key}")
-
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
