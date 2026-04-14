@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     
     BUCKET = "iata-data-lake-demo"
     key = f"raw/source=iata/dt={date.today()}/sales.zip"
-    unzip_key = "staging/sales.csv"
+    unzip_prefix = "staging"
 
     url = "https://eforexcel.com/wp/wp-content/uploads/2020/09/2m-Sales-Records.zip"
 
@@ -34,25 +34,27 @@ def lambda_handler(event, context):
         s3.upload_fileobj(response.raw, BUCKET, key)
 
     #unzip#
-    unzip_raw_file(BUCKET, key, unzip_key)
+    unzip_raw_file(BUCKET, key, unzip_prefix)
     
     return {
         "status": response.status_code,
         "s3_zip_file_path": key,
-        "s3_unzip_file_path": unzip_key
+        "s3_unzip_file_path": unzip_prefix
     }
 
 ############################## unzip raw file ###################
-def unzip_raw_file(BUCKET, key, unzip_key):    
+def unzip_raw_file(BUCKET, key, unzip_prefix):    
     obj = s3.get_object(Bucket=BUCKET, Key=key)
     buffer = io.BytesIO(obj["Body"].read())
 
     z = zipfile.ZipFile(buffer)
-    filename = z.namelist()[0]
-    data = z.read(filename)
+    
+    # loop through all files in zip
+    for filename in z.namelist():
+        data = z.read(filename)     
 
-    s3.put_object(
-        Bucket=BUCKET,
-        Key=unzip_key,
-        Body=data
-    )
+        s3.put_object(
+            Bucket=BUCKET,
+            Key=f"{unzip_prefix}/{filename}",
+            Body=data
+        )
